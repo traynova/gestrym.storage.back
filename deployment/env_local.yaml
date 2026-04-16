@@ -1,0 +1,23 @@
+GESTRYM_SERVER_ADDRESS: :60188
+GOOGLE_CLIENT_ID: "your-google-client-id.apps.googleusercontent.com"
+JWT_KEY: "traynova"
+POSTGRES_DB_HOST: monorail.proxy.rlwy.net
+POSTGRES_DB_PORT: 10091
+POSTGRES_DB_USER: postgres
+POSTGRES_DB_PASSWORD: kXeEJfMNzSckrCaRrireMPBWPsOYAhli
+POSTGRES_DB_NAME: postgres
+POSTGRES_DB_SSLMODE: disable
+
+GIN_MODE: debug
+JWT_EXPIRATION: 3600
+
+BASIC_AUTH_USERNAME: "trayuser"
+BASIC_AUTH_PASSWORD: "traypass"
+
+AUTH_API_KEY: JDFNME5NMFYxTDFENEQ=
+NOTIFICATION_SERVICE_URL: https://gestrym-notification.onrender.com
+DASHBOARD_URL: https://traynova-auth-back.onrender.com
+X_API_KEY: $1M0NM0V1L1D4D
+
+RAPID_API_KEY: be1378e8e8msh4f1a8d555ebefbdp1df714jsndb554a4345f
+RAPID_API_HOST: exercisedb.p.rapidapi.com

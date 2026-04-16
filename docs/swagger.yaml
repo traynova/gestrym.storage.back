@@ -1,0 +1,19 @@
+basePath: /gestrym-storage
+info:
+  contact: {}
+  description: API para el manejo de entrenamientos.
+  title: Gestrym API Storage
+  version: "1.0"
+paths: {}
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: X-API-Key
+    type: apiKey
+  BasicAuth:
+    type: basic
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"
