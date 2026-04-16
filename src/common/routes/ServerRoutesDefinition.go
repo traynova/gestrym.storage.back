@@ -8,6 +8,11 @@ import (
 	"sync"
 	"time"
 
+	"gestrym-storage/src/common/config"
+	"gestrym-storage/src/storage/application/usecases"
+	"gestrym-storage/src/storage/infrastructure/adapters"
+	"gestrym-storage/src/storage/infrastructure/http/handlers"
+
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	swaggerFiles "github.com/swaggo/files"
@@ -61,12 +66,24 @@ func (r *routesDefinition) addRoutes(serverInstance *gin.Engine) {
 	r.addDefaultRoutes(serverInstance)
 
 	// Instantiate DB
+	conn := config.NewPostgresConnection()
+	db := conn.GetDB()
 
 	// Repositories
+	fileRepo := adapters.NewPostgresFileRepository(db)
 
 	// Adapters & Services
+	minioAdapter, err := adapters.NewMinioStorageAdapter()
+	if err != nil {
+		r.logger.Error("Could not initialize MinIO adapter: " + err.Error())
+	}
+
+	uploadFileUseCase := usecases.NewUploadFileUseCase(minioAdapter, fileRepo)
+	getFilesUseCase := usecases.NewGetFilesByEntityUseCase(fileRepo, minioAdapter)
+	deleteFileUseCase := usecases.NewDeleteFileUseCase(fileRepo, minioAdapter)
 
 	// Controllers
+	storageHandler := handlers.NewStorageHandler(uploadFileUseCase, getFilesUseCase, deleteFileUseCase)
 
 	// Add server group
 	r.serverGroup = serverInstance.Group(docs.SwaggerInfo.BasePath)
@@ -76,6 +93,13 @@ func (r *routesDefinition) addRoutes(serverInstance *gin.Engine) {
 	r.publicGroup = r.serverGroup.Group("/public")
 
 	// Register Exercise endpoints
+	// (Note: For this service, it is Storage endpoints)
+	storageGroup := r.publicGroup.Group("/files")
+	{
+		storageGroup.POST("/upload", storageHandler.UploadFiles)
+		storageGroup.GET("", storageHandler.GetFilesByEntity)
+		storageGroup.DELETE("/:id", storageHandler.DeleteFile)
+	}
 
 	r.privateGroup = r.serverGroup.Group("/private")
 	r.protectedGroup = r.serverGroup.Group("/protected")
