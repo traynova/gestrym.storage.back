@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"gestrym-storage/src/common/models"
 	"gestrym-storage/src/storage/domain"
-	"github.com/google/uuid"
 	"mime/multipart"
 	"sync"
+
+	"github.com/google/uuid"
 )
 
 const MaxFileSize = 10 * 1024 * 1024 // 10MB
@@ -33,10 +34,8 @@ func NewUploadFileUseCase(storageAdapter domain.IStorageAdapter, fileRepo domain
 type UploadRequest struct {
 	File         multipart.File
 	Header       *multipart.FileHeader
-	Collection   string
 	CollectionID string
-	EntityID     string
-	EntityType   string
+	Service      string
 }
 
 // UploadSingleFile handles validation and uploading of a single file
@@ -53,7 +52,7 @@ func (u *UploadFileUseCase) UploadSingleFile(req UploadRequest) (*models.File, e
 	// Generate unique filename to avoid collisions in same collection/bucket
 	fileName := fmt.Sprintf("%s-%s", uuid.New().String(), req.Header.Filename)
 
-	objectName, err := u.storageAdapter.UploadFile(req.File, req.Header.Size, contentType, fileName, req.Collection)
+	objectName, err := u.storageAdapter.UploadFile(req.File, req.Header.Size, contentType, fileName, req.CollectionID)
 	if err != nil {
 		return nil, fmt.Errorf("could not upload file: %v", err)
 	}
@@ -63,15 +62,13 @@ func (u *UploadFileUseCase) UploadSingleFile(req UploadRequest) (*models.File, e
 		ContentType:  contentType,
 		Size:         req.Header.Size,
 		URL:          objectName, // Store path/object name
-		Collection:   req.Collection,
 		CollectionID: req.CollectionID,
-		EntityID:     req.EntityID,
-		EntityType:   req.EntityType,
+		Service:      req.Service,
 		IsActive:     true,
 	}
 
 	if err := u.fileRepo.Save(newFile); err != nil {
-		u.storageAdapter.DeleteFile(fileName, req.Collection) // Rollback
+		u.storageAdapter.DeleteFile(fileName, req.CollectionID) // Rollback
 		return nil, fmt.Errorf("could not save file metadata: %v", err)
 	}
 

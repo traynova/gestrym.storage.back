@@ -22,7 +22,7 @@ func (u *GetFilesByCollectionUseCase) Execute(collectionID string) ([]models.Fil
 	}
 
 	for i, file := range files {
-		url, err := u.storageAdapter.GetFileURL(file.FileName, file.Collection)
+		url, err := u.storageAdapter.GetFileURL(file.FileName, file.CollectionID)
 		if err == nil {
 			files[i].URL = url
 		}

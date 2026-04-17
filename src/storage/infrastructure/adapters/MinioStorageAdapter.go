@@ -56,26 +56,26 @@ func NewMinioStorageAdapter() (domain.IStorageAdapter, error) {
 	}, nil
 }
 
-func (m *minioStorageAdapter) UploadFile(fileStream io.Reader, objectSize int64, contentType, fileName, collection string) (string, error) {
+func (m *minioStorageAdapter) UploadFile(fileStream io.Reader, objectSize int64, contentType, fileName, collectionID string) (string, error) {
 	ctx := context.Background()
-	objectName := fmt.Sprintf("%s/%s", collection, fileName)
+	objectName := fmt.Sprintf("%s/%s", collectionID, fileName)
 	_, err := m.client.PutObject(ctx, m.bucket, objectName, fileStream, objectSize, minio.PutObjectOptions{ContentType: contentType})
 	if err != nil {
 		return "", err
 	}
-	
+
 	return objectName, nil
 }
 
-func (m *minioStorageAdapter) DeleteFile(fileName, collection string) error {
+func (m *minioStorageAdapter) DeleteFile(fileName, collectionID string) error {
 	ctx := context.Background()
-	objectName := fmt.Sprintf("%s/%s", collection, fileName)
+	objectName := fmt.Sprintf("%s/%s", collectionID, fileName)
 	return m.client.RemoveObject(ctx, m.bucket, objectName, minio.RemoveObjectOptions{})
 }
 
-func (m *minioStorageAdapter) GetFileURL(fileName, collection string) (string, error) {
+func (m *minioStorageAdapter) GetFileURL(fileName, collectionID string) (string, error) {
 	ctx := context.Background()
-	objectName := fmt.Sprintf("%s/%s", collection, fileName)
+	objectName := fmt.Sprintf("%s/%s", collectionID, fileName)
 	url, err := m.client.PresignedGetObject(ctx, m.bucket, objectName, time.Hour*24, nil)
 	if err != nil {
 		return "", err

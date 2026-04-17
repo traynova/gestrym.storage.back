@@ -37,10 +37,10 @@ func NewRoutesDefinition(serverInstance *gin.Engine) *routesDefinition {
 	routesOnce.Do(func() {
 		routesInstance = &routesDefinition{}
 		routesInstance.logger = utils.NewLogger()
-		docs.SwaggerInfo.Title = "Gestrym Training API"
-		docs.SwaggerInfo.Description = "API para el manejo de entrenamientos."
+		docs.SwaggerInfo.Title = "Gestrym Storage API"
+		docs.SwaggerInfo.Description = "API para el manejo de archivos."
 		docs.SwaggerInfo.Version = "1.0"
-		docs.SwaggerInfo.BasePath = "/gestrym-training"
+		docs.SwaggerInfo.BasePath = "/gestrym-storage"
 		routesInstance.addCORSConfig(serverInstance)
 		routesInstance.addRoutes(serverInstance)
 	})
@@ -79,12 +79,11 @@ func (r *routesDefinition) addRoutes(serverInstance *gin.Engine) {
 	}
 
 	uploadFileUseCase := usecases.NewUploadFileUseCase(minioAdapter, fileRepo)
-	getFilesUseCase := usecases.NewGetFilesByEntityUseCase(fileRepo, minioAdapter)
 	getFilesByCollectionUseCase := usecases.NewGetFilesByCollectionUseCase(fileRepo, minioAdapter)
 	deleteFileUseCase := usecases.NewDeleteFileUseCase(fileRepo, minioAdapter)
 
 	// Controllers
-	storageHandler := handlers.NewStorageHandler(uploadFileUseCase, getFilesUseCase, getFilesByCollectionUseCase, deleteFileUseCase)
+	storageHandler := handlers.NewStorageHandler(uploadFileUseCase, getFilesByCollectionUseCase, deleteFileUseCase)
 
 	// Add server group
 	r.serverGroup = serverInstance.Group(docs.SwaggerInfo.BasePath)
@@ -98,7 +97,6 @@ func (r *routesDefinition) addRoutes(serverInstance *gin.Engine) {
 	storageGroup := r.publicGroup.Group("/files")
 	{
 		storageGroup.POST("/upload", storageHandler.UploadFiles)
-		storageGroup.GET("", storageHandler.GetFilesByEntity)
 		storageGroup.GET("/collection", storageHandler.GetFilesByCollection)
 		storageGroup.DELETE("/:id", storageHandler.DeleteFile)
 	}

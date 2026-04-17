@@ -9,20 +9,17 @@ import (
 
 type StorageHandler struct {
 	uploadFileUseCase            *usecases.UploadFileUseCase
-	getFilesByEntityUseCase      *usecases.GetFilesByEntityUseCase
 	getFilesByCollectionUseCase *usecases.GetFilesByCollectionUseCase
 	deleteFileUseCase            *usecases.DeleteFileUseCase
 }
 
 func NewStorageHandler(
 	uploadFileUseCase *usecases.UploadFileUseCase,
-	getFilesByEntityUseCase *usecases.GetFilesByEntityUseCase,
 	getFilesByCollectionUseCase *usecases.GetFilesByCollectionUseCase,
 	deleteFileUseCase *usecases.DeleteFileUseCase,
 ) *StorageHandler {
 	return &StorageHandler{
 		uploadFileUseCase:            uploadFileUseCase,
-		getFilesByEntityUseCase:      getFilesByEntityUseCase,
 		getFilesByCollectionUseCase: getFilesByCollectionUseCase,
 		deleteFileUseCase:            deleteFileUseCase,
 	}
@@ -34,10 +31,8 @@ func NewStorageHandler(
 // @Tags Storage
 // @Accept multipart/form-data
 // @Produce json
-// @Param collection formData string true "Bucket internal path"
 // @Param collectionId formData string false "Collection ID to relate (optional, will generate one if empty)"
-// @Param entityId formData string false "Entity ID to relate (e.g., exercise ID)"
-// @Param entityType formData string false "Entity Type to relate (e.g., 'exercise')"
+// @Param service formData string false "Service of origin (e.g., 'users', 'exercises')"
 // @Param files formData file true "Archivos a subir"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
@@ -56,15 +51,8 @@ func (h *StorageHandler) UploadFiles(c *gin.Context) {
 		return
 	}
 
-	collection := c.PostForm("collection")
 	collectionID := c.PostForm("collectionId")
-	entityID := c.PostForm("entityId")
-	entityType := c.PostForm("entityType")
-
-	if collection == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "collection (bucket/path) is required"})
-		return
-	}
+	service := c.PostForm("service")
 
 	var requests []usecases.UploadRequest
 	for _, fileHeader := range files {
@@ -78,10 +66,8 @@ func (h *StorageHandler) UploadFiles(c *gin.Context) {
 		requests = append(requests, usecases.UploadRequest{
 			File:         file,
 			Header:       fileHeader,
-			Collection:   collection,
 			CollectionID: collectionID,
-			EntityID:     entityID,
-			EntityType:   entityType,
+			Service:      service,
 		})
 	}
 
@@ -97,34 +83,6 @@ func (h *StorageHandler) UploadFiles(c *gin.Context) {
 	})
 }
 
-// GetFilesByEntity godoc
-// @Summary Obtener archivos por entidad
-// @Description Retorna los archivos asociados a una entidad específica con URLs pre-firmadas
-// @Tags Storage
-// @Produce json
-// @Param entityId query string true "Entity ID"
-// @Param entityType query string true "Entity Type"
-// @Success 200 {object} map[string]interface{}
-// @Failure 400 {object} map[string]interface{}
-// @Failure 500 {object} map[string]interface{}
-// @Router /files [get]
-func (h *StorageHandler) GetFilesByEntity(c *gin.Context) {
-	entityID := c.Query("entityId")
-	entityType := c.Query("entityType")
-
-	if entityID == "" || entityType == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "entityId and entityType are required query parameters"})
-		return
-	}
-
-	files, err := h.getFilesByEntityUseCase.Execute(entityID, entityType)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"data": files})
-}
 
 // GetFilesByCollection godoc
 // @Summary Obtener archivos por ID de colección

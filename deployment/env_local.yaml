@@ -1,4 +1,5 @@
 GESTRYM_SERVER_ADDRESS: :60188
+GESTRYM_STORAGE_SERVER_ADDRESS: :60200
 GOOGLE_CLIENT_ID: "your-google-client-id.apps.googleusercontent.com"
 JWT_KEY: "traynova"
 POSTGRES_DB_HOST: monorail.proxy.rlwy.net

@@ -43,7 +43,7 @@ The project strictly follows **Hexagonal Architecture** (Ports and Adapters):
 ## 🧩 Modulo: Storage-Service
 ### 1. Model: `File` (`src/common/models/File.go`)
 Central database representation containing:
-`FileName`, `ContentType`, `Size`, `URL`, `Collection` (path), `CollectionID` (grouping UUID), `EntityID`, `EntityType`, and `IsActive`.
+`FileName`, `ContentType`, `Size`, `URL`, `CollectionID` (grouping UUID), `Service` (origin service), and `IsActive`.
 
 ### 2. Microservice Integration Strategy
 Other microservices (like Training or Auth) will communicate with this service either:
@@ -52,8 +52,7 @@ Other microservices (like Training or Auth) will communicate with this service e
 3. The Storage service manages MinIO, issues Presigned URLs for external access securely.
 
 ### 3. API Endpoints
-- **POST `/gestrym-storage/public/files/upload`**: Uploads files concurrently. Returns a single `collection_id`. Expects multipart `files`, `collection` (bucket path), and optional `collectionId`, `entityId`, `entityType`.
-- **GET `/gestrym-storage/public/files`**: Retrieve multiple file models based on query params (`entityId`, `entityType`).
+- **POST `/gestrym-storage/public/files/upload`**: Uploads files concurrently. Returns a single `collection_id`. Expects multipart `files`, and optional `collectionId`, `service`.
 - **GET `/gestrym-storage/public/files/collection`**: Retrieve files by `collectionId`. If only one file exists, returns the object; otherwise, an array.
 - **DELETE `/gestrym-storage/public/files/:id`**: Logical deletion. Sets `is_active = false` in PostgreSQL. File is NOT removed from MinIO.
 

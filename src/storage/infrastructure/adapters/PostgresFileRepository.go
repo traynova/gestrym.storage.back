@@ -27,14 +27,6 @@ func (r *postgresFileRepository) FindByID(id string) (*models.File, error) {
 	return &file, nil
 }
 
-func (r *postgresFileRepository) FindByEntity(entityID, entityType string) ([]models.File, error) {
-	var files []models.File
-	if err := r.db.Where("entity_id = ? AND entity_type = ? AND is_active = ?", entityID, entityType, true).Find(&files).Error; err != nil {
-		return nil, err
-	}
-	return files, nil
-}
-
 func (r *postgresFileRepository) FindByCollectionID(collectionID string) ([]models.File, error) {
 	var files []models.File
 	if err := r.db.Where("collection_id = ? AND is_active = ?", collectionID, true).Find(&files).Error; err != nil {
