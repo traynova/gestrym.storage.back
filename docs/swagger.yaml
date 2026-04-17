@@ -71,26 +71,58 @@ paths:
       summary: Eliminar archivo
       tags:
       - Storage
+  /files/collection:
+    get:
+      description: Retorna los archivos asociados a una colección específica
+      parameters:
+      - description: Collection ID
+        in: query
+        name: collectionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Obtener archivos por ID de colección
+      tags:
+      - Storage
   /files/upload:
     post:
       consumes:
       - multipart/form-data
       description: Sube archivos de forma concurrente, valida tipo y tamaño
       parameters:
-      - description: Collection/Bucket internal path
+      - description: Bucket internal path
         in: formData
         name: collection
         required: true
         type: string
+      - description: Collection ID to relate (optional, will generate one if empty)
+        in: formData
+        name: collectionId
+        type: string
       - description: Entity ID to relate (e.g., exercise ID)
         in: formData
         name: entityId
-        required: true
         type: string
       - description: Entity Type to relate (e.g., 'exercise')
         in: formData
         name: entityType
-        required: true
         type: string
       - description: Archivos a subir
         in: formData

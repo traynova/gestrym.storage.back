@@ -8,20 +8,23 @@ import (
 )
 
 type StorageHandler struct {
-	uploadFileUseCase       *usecases.UploadFileUseCase
-	getFilesByEntityUseCase *usecases.GetFilesByEntityUseCase
-	deleteFileUseCase       *usecases.DeleteFileUseCase
+	uploadFileUseCase            *usecases.UploadFileUseCase
+	getFilesByEntityUseCase      *usecases.GetFilesByEntityUseCase
+	getFilesByCollectionUseCase *usecases.GetFilesByCollectionUseCase
+	deleteFileUseCase            *usecases.DeleteFileUseCase
 }
 
 func NewStorageHandler(
 	uploadFileUseCase *usecases.UploadFileUseCase,
 	getFilesByEntityUseCase *usecases.GetFilesByEntityUseCase,
+	getFilesByCollectionUseCase *usecases.GetFilesByCollectionUseCase,
 	deleteFileUseCase *usecases.DeleteFileUseCase,
 ) *StorageHandler {
 	return &StorageHandler{
-		uploadFileUseCase:       uploadFileUseCase,
-		getFilesByEntityUseCase: getFilesByEntityUseCase,
-		deleteFileUseCase:       deleteFileUseCase,
+		uploadFileUseCase:            uploadFileUseCase,
+		getFilesByEntityUseCase:      getFilesByEntityUseCase,
+		getFilesByCollectionUseCase: getFilesByCollectionUseCase,
+		deleteFileUseCase:            deleteFileUseCase,
 	}
 }
 
@@ -31,9 +34,10 @@ func NewStorageHandler(
 // @Tags Storage
 // @Accept multipart/form-data
 // @Produce json
-// @Param collection formData string true "Collection/Bucket internal path"
-// @Param entityId formData string true "Entity ID to relate (e.g., exercise ID)"
-// @Param entityType formData string true "Entity Type to relate (e.g., 'exercise')"
+// @Param collection formData string true "Bucket internal path"
+// @Param collectionId formData string false "Collection ID to relate (optional, will generate one if empty)"
+// @Param entityId formData string false "Entity ID to relate (e.g., exercise ID)"
+// @Param entityType formData string false "Entity Type to relate (e.g., 'exercise')"
 // @Param files formData file true "Archivos a subir"
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
@@ -53,11 +57,12 @@ func (h *StorageHandler) UploadFiles(c *gin.Context) {
 	}
 
 	collection := c.PostForm("collection")
+	collectionID := c.PostForm("collectionId")
 	entityID := c.PostForm("entityId")
 	entityType := c.PostForm("entityType")
 
-	if collection == "" || entityID == "" || entityType == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "collection, entityId, and entityType are required"})
+	if collection == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "collection (bucket/path) is required"})
 		return
 	}
 
@@ -71,21 +76,25 @@ func (h *StorageHandler) UploadFiles(c *gin.Context) {
 		defer file.Close()
 
 		requests = append(requests, usecases.UploadRequest{
-			File:       file,
-			Header:     fileHeader,
-			Collection: collection,
-			EntityID:   entityID,
-			EntityType: entityType,
+			File:         file,
+			Header:       fileHeader,
+			Collection:   collection,
+			CollectionID: collectionID,
+			EntityID:     entityID,
+			EntityType:   entityType,
 		})
 	}
 
-	uploadedFiles, err := h.uploadFileUseCase.UploadMultipleFiles(requests)
+	resultCollectionID, err := h.uploadFileUseCase.UploadMultipleFiles(requests)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "collection_id": resultCollectionID})
 		return
 	}
 
-	c.JSON(http.StatusOK, gin.H{"message": "files uploaded successfully", "data": uploadedFiles})
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "files uploaded successfully",
+		"collection_id": resultCollectionID,
+	})
 }
 
 // GetFilesByEntity godoc
@@ -111,6 +120,41 @@ func (h *StorageHandler) GetFilesByEntity(c *gin.Context) {
 	files, err := h.getFilesByEntityUseCase.Execute(entityID, entityType)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"data": files})
+}
+
+// GetFilesByCollection godoc
+// @Summary Obtener archivos por ID de colección
+// @Description Retorna los archivos asociados a una colección específica
+// @Tags Storage
+// @Produce json
+// @Param collectionId query string true "Collection ID"
+// @Success 200 {object} map[string]interface{}
+// @Failure 400 {object} map[string]interface{}
+// @Failure 500 {object} map[string]interface{}
+// @Router /files/collection [get]
+func (h *StorageHandler) GetFilesByCollection(c *gin.Context) {
+	collectionID := c.Query("collectionId")
+
+	if collectionID == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "collectionId is required"})
+		return
+	}
+
+	files, err := h.getFilesByCollectionUseCase.Execute(collectionID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	// If only one file, we can still return as a list or just the object,
+	// but keeping consistent with a list is usually better.
+	// The requirement: "si es solo uno se retorna ese" might mean don't return an array if size is 1.
+	if len(files) == 1 {
+		c.JSON(http.StatusOK, gin.H{"data": files[0]})
 		return
 	}
 

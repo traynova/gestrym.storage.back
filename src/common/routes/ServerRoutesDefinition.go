@@ -80,10 +80,11 @@ func (r *routesDefinition) addRoutes(serverInstance *gin.Engine) {
 
 	uploadFileUseCase := usecases.NewUploadFileUseCase(minioAdapter, fileRepo)
 	getFilesUseCase := usecases.NewGetFilesByEntityUseCase(fileRepo, minioAdapter)
+	getFilesByCollectionUseCase := usecases.NewGetFilesByCollectionUseCase(fileRepo, minioAdapter)
 	deleteFileUseCase := usecases.NewDeleteFileUseCase(fileRepo, minioAdapter)
 
 	// Controllers
-	storageHandler := handlers.NewStorageHandler(uploadFileUseCase, getFilesUseCase, deleteFileUseCase)
+	storageHandler := handlers.NewStorageHandler(uploadFileUseCase, getFilesUseCase, getFilesByCollectionUseCase, deleteFileUseCase)
 
 	// Add server group
 	r.serverGroup = serverInstance.Group(docs.SwaggerInfo.BasePath)
@@ -98,6 +99,7 @@ func (r *routesDefinition) addRoutes(serverInstance *gin.Engine) {
 	{
 		storageGroup.POST("/upload", storageHandler.UploadFiles)
 		storageGroup.GET("", storageHandler.GetFilesByEntity)
+		storageGroup.GET("/collection", storageHandler.GetFilesByCollection)
 		storageGroup.DELETE("/:id", storageHandler.DeleteFile)
 	}
 

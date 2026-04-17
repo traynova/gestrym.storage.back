@@ -66,6 +66,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/files/collection": {
+            "get": {
+                "description": "Retorna los archivos asociados a una colección específica",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Storage"
+                ],
+                "summary": "Obtener archivos por ID de colección",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Collection ID",
+                        "name": "collectionId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/files/upload": {
             "post": {
                 "description": "Sube archivos de forma concurrente, valida tipo y tamaño",
@@ -82,24 +126,28 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Collection/Bucket internal path",
+                        "description": "Bucket internal path",
                         "name": "collection",
                         "in": "formData",
                         "required": true
                     },
                     {
                         "type": "string",
+                        "description": "Collection ID to relate (optional, will generate one if empty)",
+                        "name": "collectionId",
+                        "in": "formData"
+                    },
+                    {
+                        "type": "string",
                         "description": "Entity ID to relate (e.g., exercise ID)",
                         "name": "entityId",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "string",
                         "description": "Entity Type to relate (e.g., 'exercise')",
                         "name": "entityType",
-                        "in": "formData",
-                        "required": true
+                        "in": "formData"
                     },
                     {
                         "type": "file",

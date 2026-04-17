@@ -21,7 +21,7 @@ func (r *postgresFileRepository) Save(file *models.File) error {
 
 func (r *postgresFileRepository) FindByID(id string) (*models.File, error) {
 	var file models.File
-	if err := r.db.First(&file, id).Error; err != nil {
+	if err := r.db.Where("id = ? AND is_active = ?", id, true).First(&file).Error; err != nil {
 		return nil, err
 	}
 	return &file, nil
@@ -29,12 +29,20 @@ func (r *postgresFileRepository) FindByID(id string) (*models.File, error) {
 
 func (r *postgresFileRepository) FindByEntity(entityID, entityType string) ([]models.File, error) {
 	var files []models.File
-	if err := r.db.Where("entity_id = ? AND entity_type = ?", entityID, entityType).Find(&files).Error; err != nil {
+	if err := r.db.Where("entity_id = ? AND entity_type = ? AND is_active = ?", entityID, entityType, true).Find(&files).Error; err != nil {
+		return nil, err
+	}
+	return files, nil
+}
+
+func (r *postgresFileRepository) FindByCollectionID(collectionID string) ([]models.File, error) {
+	var files []models.File
+	if err := r.db.Where("collection_id = ? AND is_active = ?", collectionID, true).Find(&files).Error; err != nil {
 		return nil, err
 	}
 	return files, nil
 }
 
 func (r *postgresFileRepository) Delete(file *models.File) error {
-	return r.db.Delete(file).Error
+	return r.db.Model(file).Update("is_active", false).Error
 }

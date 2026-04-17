@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"gestrym-storage/src/common/models"
 	"gestrym-storage/src/storage/domain"
+	"github.com/google/uuid"
 	"mime/multipart"
 	"sync"
 )
@@ -30,11 +31,12 @@ func NewUploadFileUseCase(storageAdapter domain.IStorageAdapter, fileRepo domain
 }
 
 type UploadRequest struct {
-	File        multipart.File
-	Header      *multipart.FileHeader
-	Collection  string
-	EntityID    string
-	EntityType  string
+	File         multipart.File
+	Header       *multipart.FileHeader
+	Collection   string
+	CollectionID string
+	EntityID     string
+	EntityType   string
 }
 
 // UploadSingleFile handles validation and uploading of a single file
@@ -48,30 +50,24 @@ func (u *UploadFileUseCase) UploadSingleFile(req UploadRequest) (*models.File, e
 		return nil, fmt.Errorf("invalid file type: %s", contentType)
 	}
 
-	fileName := fmt.Sprintf("%s-%s", req.EntityID, req.Header.Filename)
-	
+	// Generate unique filename to avoid collisions in same collection/bucket
+	fileName := fmt.Sprintf("%s-%s", uuid.New().String(), req.Header.Filename)
+
 	objectName, err := u.storageAdapter.UploadFile(req.File, req.Header.Size, contentType, fileName, req.Collection)
 	if err != nil {
 		return nil, fmt.Errorf("could not upload file: %v", err)
 	}
 
-	_, err = u.storageAdapter.GetFileURL(fileName, req.Collection)
-	if err != nil {
-		return nil, fmt.Errorf("could not get file url: %v", err)
-	}
-
-	// Remove query params from URL for storage if it's public, or just store the object path
-	// Assuming MinIO presigned URL is fine for now, or you could store just object Name and generate URL on the fly.
-	// We'll store the objectName for URL so it can be generated or accessed consistently.
-	
 	newFile := &models.File{
-		FileName:    fileName,
-		ContentType: contentType,
-		Size:        req.Header.Size,
-		URL:         objectName, // Store path, generate presigned url on access
-		Collection:  req.Collection,
-		EntityID:    req.EntityID,
-		EntityType:  req.EntityType,
+		FileName:     fileName,
+		ContentType:  contentType,
+		Size:         req.Header.Size,
+		URL:          objectName, // Store path/object name
+		Collection:   req.Collection,
+		CollectionID: req.CollectionID,
+		EntityID:     req.EntityID,
+		EntityType:   req.EntityType,
+		IsActive:     true,
 	}
 
 	if err := u.fileRepo.Save(newFile); err != nil {
@@ -82,23 +78,31 @@ func (u *UploadFileUseCase) UploadSingleFile(req UploadRequest) (*models.File, e
 	return newFile, nil
 }
 
-// UploadMultipleFiles handles concurrent uploading of multiple files
-func (u *UploadFileUseCase) UploadMultipleFiles(requests []UploadRequest) ([]*models.File, error) {
+// UploadMultipleFiles handles concurrent uploading of multiple files and returns the collection ID
+func (u *UploadFileUseCase) UploadMultipleFiles(requests []UploadRequest) (string, error) {
+	if len(requests) == 0 {
+		return "", fmt.Errorf("no files to upload")
+	}
+
+	// All files in this batch will share the same CollectionID if not provided
+	collectionID := requests[0].CollectionID
+	if collectionID == "" {
+		collectionID = uuid.New().String()
+	}
+
 	var wg sync.WaitGroup
-	results := make([]*models.File, len(requests))
 	errorsChan := make(chan error, len(requests))
 
-	for i, req := range requests {
+	for i := range requests {
+		requests[i].CollectionID = collectionID // Ensure all share the same ID
 		wg.Add(1)
-		go func(index int, request UploadRequest) {
+		go func(req UploadRequest) {
 			defer wg.Done()
-			file, err := u.UploadSingleFile(request)
+			_, err := u.UploadSingleFile(req)
 			if err != nil {
 				errorsChan <- err
-				return
 			}
-			results[index] = file
-		}(i, req)
+		}(requests[i])
 	}
 
 	wg.Wait()
@@ -112,8 +116,8 @@ func (u *UploadFileUseCase) UploadMultipleFiles(requests []UploadRequest) ([]*mo
 	}
 
 	if len(uploadErrors) > 0 {
-		return nil, fmt.Errorf("encountered errors during concurrent upload: %v", uploadErrors)
+		return collectionID, fmt.Errorf("encountered errors during concurrent upload: %v", uploadErrors)
 	}
 
-	return results, nil
+	return collectionID, nil
 }

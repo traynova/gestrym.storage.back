@@ -20,12 +20,9 @@ func (u *DeleteFileUseCase) Execute(fileID string) error {
 		return fmt.Errorf("could not find file: %v", err)
 	}
 
-	if err := u.storageAdapter.DeleteFile(file.FileName, file.Collection); err != nil {
-		return fmt.Errorf("could not delete file from storage: %v", err)
-	}
-
+	// Logic deletion: is_active = false in DB, file remains in storage
 	if err := u.fileRepo.Delete(file); err != nil {
-		return fmt.Errorf("could not delete file metadata: %v", err)
+		return fmt.Errorf("could not deactivate file metadata: %v", err)
 	}
 
 	return nil

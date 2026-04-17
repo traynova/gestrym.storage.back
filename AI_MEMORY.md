@@ -43,19 +43,24 @@ The project strictly follows **Hexagonal Architecture** (Ports and Adapters):
 ## 🧩 Modulo: Storage-Service
 ### 1. Model: `File` (`src/common/models/File.go`)
 Central database representation containing:
-`FileName`, `ContentType`, `Size`, `URL`, `Collection`, `EntityID`, and `EntityType`.
+`FileName`, `ContentType`, `Size`, `URL`, `Collection` (path), `CollectionID` (grouping UUID), `EntityID`, `EntityType`, and `IsActive`.
 
 ### 2. Microservice Integration Strategy
 Other microservices (like Training or Auth) will communicate with this service either:
-1. By HTTP REST interface, pushing the file as `multipart/form-data`, passing their contextual IDs (`EntityID` and `EntityType`).
-2. Getting signed URLs to stream directly, or receiving the generated standard URL. The Storage service manages MinIO, issues Presigned URLs for external access securely.
+1. By HTTP REST interface, pushing the file as `multipart/form-data`. They will receive a `collection_id` which they should store in their own databases.
+2. They can later retrieve files by sending the `collection_id`.
+3. The Storage service manages MinIO, issues Presigned URLs for external access securely.
 
 ### 3. API Endpoints
-- **POST `/gestrym-storage/public/files/upload`**: Uploads files concurrently (expects multipart `files`, `collection`, `entityId`, `entityType`). Validate size (<= 10MB) and type.
-- **GET `/gestrym-storage/public/files`**: Retrieve multiple file models (with ephemeral Pre-Signed URLs embedded) based on query params (`entityId`, `entityType`).
-- **DELETE `/gestrym-storage/public/files/:id`**: Removes file from MinIO and deletes record from PostgreSQL.
+- **POST `/gestrym-storage/public/files/upload`**: Uploads files concurrently. Returns a single `collection_id`. Expects multipart `files`, `collection` (bucket path), and optional `collectionId`, `entityId`, `entityType`.
+- **GET `/gestrym-storage/public/files`**: Retrieve multiple file models based on query params (`entityId`, `entityType`).
+- **GET `/gestrym-storage/public/files/collection`**: Retrieve files by `collectionId`. If only one file exists, returns the object; otherwise, an array.
+- **DELETE `/gestrym-storage/public/files/:id`**: Logical deletion. Sets `is_active = false` in PostgreSQL. File is NOT removed from MinIO.
 
 ## 📝 Rules for Future AI Interactions
+- **Logical Deletion**: Never delete records or physical files. Always use the `is_active` flag.
+- **Collections**: Use `collection_id` for grouping files related to a single entity field (e.g., gallery of images for one exercise).
+- **Return Shapes**: Upload endpoints should prioritize returning the `collection_id` for easy integration with other microservices.
 - **Do Not Break existing Hexagonal pattern**. Dependency Injection happens at the `routes` level (`ServerRoutesDefinition.go`). Handlers, Adapters, and Repositories must always have clear interfaces in `domain/`.
 - Models used for persistence must stay inside `src/common/models` and registered in `config/Migrations.go`. Keep models unique to their bounded context.
 - Adhere to the pre-existing error handling shapes and HTTP status returns (`gin.H{...}`).
