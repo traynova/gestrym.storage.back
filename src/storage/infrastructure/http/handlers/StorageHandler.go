@@ -8,9 +8,9 @@ import (
 )
 
 type StorageHandler struct {
-	uploadFileUseCase            *usecases.UploadFileUseCase
+	uploadFileUseCase           *usecases.UploadFileUseCase
 	getFilesByCollectionUseCase *usecases.GetFilesByCollectionUseCase
-	deleteFileUseCase            *usecases.DeleteFileUseCase
+	deleteFileUseCase           *usecases.DeleteFileUseCase
 }
 
 func NewStorageHandler(
@@ -19,9 +19,9 @@ func NewStorageHandler(
 	deleteFileUseCase *usecases.DeleteFileUseCase,
 ) *StorageHandler {
 	return &StorageHandler{
-		uploadFileUseCase:            uploadFileUseCase,
+		uploadFileUseCase:           uploadFileUseCase,
 		getFilesByCollectionUseCase: getFilesByCollectionUseCase,
-		deleteFileUseCase:            deleteFileUseCase,
+		deleteFileUseCase:           deleteFileUseCase,
 	}
 }
 
@@ -37,7 +37,8 @@ func NewStorageHandler(
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /files/upload [post]
+// @Security ApiKeyAuth
+// @Router /internal/files/upload [post]
 func (h *StorageHandler) UploadFiles(c *gin.Context) {
 	form, err := c.MultipartForm()
 	if err != nil {
@@ -78,11 +79,9 @@ func (h *StorageHandler) UploadFiles(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"message":       "files uploaded successfully",
 		"collection_id": resultCollectionID,
 	})
 }
-
 
 // GetFilesByCollection godoc
 // @Summary Obtener archivos por ID de colección
@@ -93,7 +92,8 @@ func (h *StorageHandler) UploadFiles(c *gin.Context) {
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /files/collection [get]
+// @Security ApiKeyAuth
+// @Router /internal/files/collection [get]
 func (h *StorageHandler) GetFilesByCollection(c *gin.Context) {
 	collectionID := c.Query("collectionId")
 
@@ -108,15 +108,7 @@ func (h *StorageHandler) GetFilesByCollection(c *gin.Context) {
 		return
 	}
 
-	// If only one file, we can still return as a list or just the object,
-	// but keeping consistent with a list is usually better.
-	// The requirement: "si es solo uno se retorna ese" might mean don't return an array if size is 1.
-	if len(files) == 1 {
-		c.JSON(http.StatusOK, gin.H{"data": files[0]})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"data": files})
+	c.JSON(http.StatusOK, gin.H{"data": files[0]})
 }
 
 // DeleteFile godoc
@@ -128,7 +120,8 @@ func (h *StorageHandler) GetFilesByCollection(c *gin.Context) {
 // @Success 200 {object} map[string]interface{}
 // @Failure 400 {object} map[string]interface{}
 // @Failure 500 {object} map[string]interface{}
-// @Router /files/{id} [delete]
+// @Security ApiKeyAuth
+// @Router /internal/files/{id} [delete]
 func (h *StorageHandler) DeleteFile(c *gin.Context) {
 	fileID := c.Param("id")
 

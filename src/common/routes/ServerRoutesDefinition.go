@@ -87,22 +87,16 @@ func (r *routesDefinition) addRoutes(serverInstance *gin.Engine) {
 
 	// Add server group
 	r.serverGroup = serverInstance.Group(docs.SwaggerInfo.BasePath)
-	r.serverGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
+
+	// Explicitly set the URL and InstanceName for the swagger JSON to avoid "stuck loading" issues
+	url := ginSwagger.URL("/gestrym-storage/swagger/doc.json")
+	r.serverGroup.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler, url, ginSwagger.InstanceName("swagger")))
 
 	// Add groups
 	r.publicGroup = r.serverGroup.Group("/public")
-
-	// Register Exercise endpoints
-	// (Note: For this service, it is Storage endpoints)
-	storageGroup := r.publicGroup.Group("/files")
-	{
-		storageGroup.POST("/upload", storageHandler.UploadFiles)
-		storageGroup.GET("/collection", storageHandler.GetFilesByCollection)
-		storageGroup.DELETE("/:id", storageHandler.DeleteFile)
-	}
-
 	r.privateGroup = r.serverGroup.Group("/private")
 	r.protectedGroup = r.serverGroup.Group("/protected")
+	r.internalGroup = r.serverGroup.Group("/internal")
 
 	// Add middleware to private group
 	r.privateGroup.Use(middleware.SetupJWTMiddleware())
@@ -112,7 +106,7 @@ func (r *routesDefinition) addRoutes(serverInstance *gin.Engine) {
 	// Add routes to groups
 	r.addPublicRoutes()
 	r.addPrivateRoutes()
-	r.addInternalRoutes()
+	r.addInternalRoutes(storageHandler)
 	r.addProtectedRoutes()
 
 }
@@ -123,7 +117,7 @@ func (r *routesDefinition) addDefaultRoutes(serverInstance *gin.Engine) {
 	serverInstance.GET("/", func(cnx *gin.Context) {
 		response := map[string]interface{}{
 			"code":    "OK",
-			"message": "gestrym-training OK...",
+			"message": "gestrym-storage OK...",
 			"date":    utils.GetCurrentTime(),
 		}
 
@@ -149,7 +143,10 @@ func (r *routesDefinition) addPublicRoutes() {
 func (r *routesDefinition) addPrivateRoutes() {
 }
 
-func (r *routesDefinition) addInternalRoutes() {
+func (r *routesDefinition) addInternalRoutes(storageHandler *handlers.StorageHandler) {
+	r.internalGroup.POST("/files/upload", storageHandler.UploadFiles)
+	r.internalGroup.GET("/files/collection", storageHandler.GetFilesByCollection)
+	r.internalGroup.DELETE("/files/:id", storageHandler.DeleteFile)
 
 }
 

@@ -15,59 +15,13 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/files": {
+        "/internal/files/collection": {
             "get": {
-                "description": "Retorna los archivos asociados a una entidad específica con URLs pre-firmadas",
-                "produces": [
-                    "application/json"
-                ],
-                "tags": [
-                    "Storage"
-                ],
-                "summary": "Obtener archivos por entidad",
-                "parameters": [
+                "security": [
                     {
-                        "type": "string",
-                        "description": "Entity ID",
-                        "name": "entityId",
-                        "in": "query",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
-                        "description": "Entity Type",
-                        "name": "entityType",
-                        "in": "query",
-                        "required": true
+                        "ApiKeyAuth": []
                     }
                 ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    }
-                }
-            }
-        },
-        "/files/collection": {
-            "get": {
                 "description": "Retorna los archivos asociados a una colección específica",
                 "produces": [
                     "application/json"
@@ -110,8 +64,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/files/upload": {
+        "/internal/files/upload": {
             "post": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Sube archivos de forma concurrente, valida tipo y tamaño",
                 "consumes": [
                     "multipart/form-data"
@@ -126,27 +85,14 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Bucket internal path",
-                        "name": "collection",
-                        "in": "formData",
-                        "required": true
-                    },
-                    {
-                        "type": "string",
                         "description": "Collection ID to relate (optional, will generate one if empty)",
                         "name": "collectionId",
                         "in": "formData"
                     },
                     {
                         "type": "string",
-                        "description": "Entity ID to relate (e.g., exercise ID)",
-                        "name": "entityId",
-                        "in": "formData"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Entity Type to relate (e.g., 'exercise')",
-                        "name": "entityType",
+                        "description": "Service of origin (e.g., 'users', 'exercises')",
+                        "name": "service",
                         "in": "formData"
                     },
                     {
@@ -182,8 +128,13 @@ const docTemplate = `{
                 }
             }
         },
-        "/files/{id}": {
+        "/internal/files/{id}": {
             "delete": {
+                "security": [
+                    {
+                        "ApiKeyAuth": []
+                    }
+                ],
                 "description": "Elimina un archivo del storage y de la base de datos",
                 "produces": [
                     "application/json"

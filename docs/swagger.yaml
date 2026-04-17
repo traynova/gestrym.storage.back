@@ -5,43 +5,7 @@ info:
   title: Gestrym API Storage
   version: "1.0"
 paths:
-  /files:
-    get:
-      description: Retorna los archivos asociados a una entidad específica con URLs
-        pre-firmadas
-      parameters:
-      - description: Entity ID
-        in: query
-        name: entityId
-        required: true
-        type: string
-      - description: Entity Type
-        in: query
-        name: entityType
-        required: true
-        type: string
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties: true
-            type: object
-      summary: Obtener archivos por entidad
-      tags:
-      - Storage
-  /files/{id}:
+  /internal/files/{id}:
     delete:
       description: Elimina un archivo del storage y de la base de datos
       parameters:
@@ -68,10 +32,12 @@ paths:
           schema:
             additionalProperties: true
             type: object
+      security:
+      - ApiKeyAuth: []
       summary: Eliminar archivo
       tags:
       - Storage
-  /files/collection:
+  /internal/files/collection:
     get:
       description: Retorna los archivos asociados a una colección específica
       parameters:
@@ -98,31 +64,24 @@ paths:
           schema:
             additionalProperties: true
             type: object
+      security:
+      - ApiKeyAuth: []
       summary: Obtener archivos por ID de colección
       tags:
       - Storage
-  /files/upload:
+  /internal/files/upload:
     post:
       consumes:
       - multipart/form-data
       description: Sube archivos de forma concurrente, valida tipo y tamaño
       parameters:
-      - description: Bucket internal path
-        in: formData
-        name: collection
-        required: true
-        type: string
       - description: Collection ID to relate (optional, will generate one if empty)
         in: formData
         name: collectionId
         type: string
-      - description: Entity ID to relate (e.g., exercise ID)
+      - description: Service of origin (e.g., 'users', 'exercises')
         in: formData
-        name: entityId
-        type: string
-      - description: Entity Type to relate (e.g., 'exercise')
-        in: formData
-        name: entityType
+        name: service
         type: string
       - description: Archivos a subir
         in: formData
@@ -147,6 +106,8 @@ paths:
           schema:
             additionalProperties: true
             type: object
+      security:
+      - ApiKeyAuth: []
       summary: Subir uno o varios archivos
       tags:
       - Storage

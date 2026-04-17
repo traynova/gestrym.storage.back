@@ -2,8 +2,8 @@ package usecases
 
 import (
 	"fmt"
-	"gestrym-storage/src/common/models"
 	"gestrym-storage/src/storage/domain"
+	"gestrym-storage/src/storage/infrastructure/structs"
 )
 
 type GetFilesByCollectionUseCase struct {
@@ -15,18 +15,26 @@ func NewGetFilesByCollectionUseCase(fileRepo domain.IFileRepository, storageAdap
 	return &GetFilesByCollectionUseCase{fileRepo: fileRepo, storageAdapter: storageAdapter}
 }
 
-func (u *GetFilesByCollectionUseCase) Execute(collectionID string) ([]models.File, error) {
+func (u *GetFilesByCollectionUseCase) Execute(collectionID string) ([]structs.GetResponse, error) {
 	files, err := u.fileRepo.FindByCollectionID(collectionID)
 	if err != nil {
 		return nil, fmt.Errorf("could not retrieve files from repository: %v", err)
 	}
 
-	for i, file := range files {
+	var response []structs.GetResponse
+	for _, file := range files {
 		url, err := u.storageAdapter.GetFileURL(file.FileName, file.CollectionID)
 		if err == nil {
-			files[i].URL = url
+			response = append(response, structs.GetResponse{
+				Id:           file.ID,
+				FileName:     file.FileName,
+				ContentType:  file.ContentType,
+				Size:         file.Size,
+				URL:          url,
+				CollectionID: file.CollectionID,
+			})
 		}
 	}
 
-	return files, nil
+	return response, nil
 }
