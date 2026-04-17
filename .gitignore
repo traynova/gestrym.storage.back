@@ -27,3 +27,5 @@ logs/
 .vscode/
 *.swp
 *.core
+
+*.env_local.yaml
