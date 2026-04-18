@@ -16,6 +16,7 @@ var AllowedContentTypes = map[string]bool{
 	"image/jpeg":      true,
 	"image/png":       true,
 	"image/webp":      true,
+	"image/gif":       true,
 	"application/pdf": true,
 }
 

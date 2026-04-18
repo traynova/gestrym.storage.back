@@ -16,7 +16,7 @@ vendor/
 
 # Environment variables
 .env
-deployment/env_local.yaml
+./deployment/env_local.yaml
 
 # Log files
 *.log
