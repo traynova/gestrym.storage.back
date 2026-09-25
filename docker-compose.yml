@@ -1,20 +1,38 @@
-version: '3.8'
-
-services:
-  minio:
-    image: minio/minio
-    container_name: minio-local
-    restart: always
-    ports:
-      - "9000:9000"
-      - "9001:9001"
-    environment:
-      MINIO_ROOT_USER: admin
-      MINIO_ROOT_PASSWORD: supersecret123
-    command: server /data --console-address ":9001"
-    volumes:
-      - minio_data:/data
+networks:
+  gestrym-network:
+    external: true
 
 volumes:
   minio_data:
+    driver: local
 
+services:
+  gestrym-storage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ${STORAGE_IMAGE:-jhonnier/back-storage:${VERSION:-1.0.0}}
+    container_name: gestrym-storage
+    restart: always
+    env_file:
+      - stack.env
+    depends_on:
+      - minio
+    networks:
+      - gestrym-network
+
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: gestrym-minio
+    restart: always
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-admin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-supersecret123}
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio_data:/data
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    networks:
+      - gestrym-network

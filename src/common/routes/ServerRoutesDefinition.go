@@ -1,6 +1,7 @@
 package routes
 
 import (
+	"fmt"
 	"gestrym-storage/docs"
 	"gestrym-storage/src/common/middleware"
 	"gestrym-storage/src/common/utils"
@@ -102,6 +103,7 @@ func (r *routesDefinition) addRoutes(serverInstance *gin.Engine) {
 	r.privateGroup.Use(middleware.SetupJWTMiddleware())
 
 	r.protectedGroup.Use(middleware.SetupApiKeyMiddleware())
+	r.internalGroup.Use(middleware.SetupApiKeyMiddleware())
 
 	// Add routes to groups
 	r.addPublicRoutes()
@@ -126,9 +128,22 @@ func (r *routesDefinition) addDefaultRoutes(serverInstance *gin.Engine) {
 
 	// Handle 404
 	serverInstance.NoRoute(func(cnx *gin.Context) {
+		method := cnx.Request.Method
+		path := cnx.Request.URL.Path
+		clientIP := cnx.ClientIP()
+		query := cnx.Request.URL.RawQuery
+		fullPath := path
+		if query != "" {
+			fullPath = path + "?" + query
+		}
+
+		r.logger.Error("[NOT_FOUND] %s %s desde IP:%s — ruta no registrada en gestrym-storage | query:%q",
+			method, fullPath, clientIP, query)
+
 		response := map[string]interface{}{
 			"code":    "NOT_FOUND",
-			"message": "Resource not found",
+			"message": fmt.Sprintf("La ruta '%s %s' no existe en este servicio", method, path),
+			"hint":    "Prefijos válidos: /gestrym-storage/internal, /gestrym-storage/private, /gestrym-storage/public",
 			"date":    utils.GetCurrentTime(),
 		}
 

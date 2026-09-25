@@ -3,6 +3,7 @@ package src
 import (
 	"fmt"
 	"gestrym-storage/src/common/config"
+	"gestrym-storage/src/common/middleware"
 	"gestrym-storage/src/common/routes"
 	"gestrym-storage/src/common/utils"
 
@@ -65,7 +66,9 @@ func initServer() {
 	}
 
 	gin.SetMode(ginMode)
-	serverInstance := gin.Default()
+	serverInstance := gin.New()
+	serverInstance.Use(gin.Recovery())
+	serverInstance.Use(middleware.SetupGinLoggerMiddleware())
 	routes.NewRoutesDefinition(serverInstance)
 
 	logger.Info("[GESTRYM_STORAGE] Start server on -> %v", address)

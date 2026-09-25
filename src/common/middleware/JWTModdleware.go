@@ -42,7 +42,7 @@ func ValidateTokenMiddleware(jwtKey []byte) gin.HandlerFunc {
 		}
 
 		tokenStr := strings.TrimPrefix(authHeader, "Bearer ")
-		claims := CustomClaims{}
+		claims := &CustomClaims{}
 		token, err := jwt.ParseWithClaims(tokenStr, claims, func(token *jwt.Token) (interface{}, error) {
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				logger.Error("[JWT_AUTHENTICATION_FAILED] %v", ErrInvalidSignature)
@@ -71,6 +71,7 @@ func ValidateTokenMiddleware(jwtKey []byte) gin.HandlerFunc {
 		c.Set("user_id", claims.UserID)
 		c.Set("role_id", claims.RoleID)
 		c.Set("access_level_id", claims.AccessLevelID)
+		c.Set("phone_number", claims.PhoneNumber)
 		c.Next()
 	}
 }

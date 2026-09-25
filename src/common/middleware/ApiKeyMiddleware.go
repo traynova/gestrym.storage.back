@@ -29,11 +29,11 @@ func ValidateAPIKey(encodedApiKey string) gin.HandlerFunc {
 }
 
 func SetupApiKeyMiddleware() gin.HandlerFunc {
-	encodedApiKey := viper.GetString("AUTH_API_KEY")
+	encodedApiKey := viper.GetString("API_KEY")
 	if encodedApiKey == "" {
 		logger.Error("[API_KEY_MIDDLEWARE_CONFIG_FAILED] API_KEY no está configurado en el archivo de configuración")
 		return func(c *gin.Context) {
-			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "AUTH_API_KEY no está configurado"})
+			c.AbortWithStatusJSON(http.StatusInternalServerError, gin.H{"error": "API_KEY no está configurado"})
 		}
 	}
 	return ValidateAPIKey(encodedApiKey)

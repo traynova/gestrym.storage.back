@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"fmt"
+	"gestrym-storage/src/common/utils"
 	"gestrym-storage/src/storage/application/usecases"
 	"net/http"
 
@@ -11,6 +13,7 @@ type StorageHandler struct {
 	uploadFileUseCase           *usecases.UploadFileUseCase
 	getFilesByCollectionUseCase *usecases.GetFilesByCollectionUseCase
 	deleteFileUseCase           *usecases.DeleteFileUseCase
+	logger                      utils.ILogger
 }
 
 func NewStorageHandler(
@@ -22,6 +25,7 @@ func NewStorageHandler(
 		uploadFileUseCase:           uploadFileUseCase,
 		getFilesByCollectionUseCase: getFilesByCollectionUseCase,
 		deleteFileUseCase:           deleteFileUseCase,
+		logger:                      utils.NewLogger(),
 	}
 }
 
@@ -40,25 +44,62 @@ func NewStorageHandler(
 // @Security ApiKeyAuth
 // @Router /internal/files/upload [post]
 func (h *StorageHandler) UploadFiles(c *gin.Context) {
+	clientIP := c.ClientIP()
+	contentType := c.GetHeader("Content-Type")
+	apiKeyPresent := c.GetHeader("X-API-Key") != ""
+
+	h.logger.Info("[UPLOAD] request recibido desde IP:%s | Content-Type:%s | X-API-Key-presente:%v",
+		clientIP, contentType, apiKeyPresent)
+
 	form, err := c.MultipartForm()
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "could not parse multipart form"})
+		h.logger.Error("[UPLOAD] [400] error al parsear multipart form desde IP:%s | Content-Type:%q | error:%v",
+			clientIP, contentType, err)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":        "could not parse multipart form",
+			"detail":       err.Error(),
+			"content_type": contentType,
+		})
 		return
+	}
+
+	// Log todos los campos del form para diagnóstico
+	for fieldName, fileHeaders := range form.File {
+		for _, fh := range fileHeaders {
+			h.logger.Info("[UPLOAD] campo file recibido: field=%q filename=%q size=%d contentType=%s",
+				fieldName, fh.Filename, fh.Size, fh.Header.Get("Content-Type"))
+		}
+	}
+	for fieldName, values := range form.Value {
+		h.logger.Info("[UPLOAD] campo texto recibido: field=%q values=%v", fieldName, values)
 	}
 
 	files := form.File["files"]
 	if len(files) == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "no files provided"})
+		availableFields := make([]string, 0, len(form.File))
+		for k := range form.File {
+			availableFields = append(availableFields, k)
+		}
+		h.logger.Error("[UPLOAD] [400] campo 'files' no encontrado desde IP:%s | campos file disponibles:%v",
+			clientIP, availableFields)
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error":             "no files provided",
+			"hint":              "El campo multipart debe llamarse 'files' (plural)",
+			"campos_recibidos":  fmt.Sprintf("%v", availableFields),
+		})
 		return
 	}
 
 	collectionID := c.PostForm("collectionId")
 	service := c.PostForm("service")
+	h.logger.Info("[UPLOAD] procesando %d archivo(s) | collectionId:%q service:%q",
+		len(files), collectionID, service)
 
 	var requests []usecases.UploadRequest
 	for _, fileHeader := range files {
 		file, err := fileHeader.Open()
 		if err != nil {
+			h.logger.Error("[UPLOAD] [500] error al abrir archivo %q: %v", fileHeader.Filename, err)
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not open file: " + fileHeader.Filename})
 			return
 		}
@@ -74,10 +115,13 @@ func (h *StorageHandler) UploadFiles(c *gin.Context) {
 
 	resultCollectionID, err := h.uploadFileUseCase.UploadMultipleFiles(requests)
 	if err != nil {
+		h.logger.Error("[UPLOAD] [500] error en use case UploadMultipleFiles | collectionId:%q | error:%v",
+			resultCollectionID, err)
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error(), "collection_id": resultCollectionID})
 		return
 	}
 
+	h.logger.Info("[UPLOAD] [200] archivos subidos exitosamente | collection_id:%q", resultCollectionID)
 	c.JSON(http.StatusOK, gin.H{
 		"collection_id": resultCollectionID,
 	})
